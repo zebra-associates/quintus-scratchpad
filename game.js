@@ -90,14 +90,13 @@ Quintus.MyAI = function(Q) {
                     Q.stage().people.pop(Q.stage().people.indexOf(collision.obj));
                     collision.obj.destroy();
                 }
-                this.destroy();
-
+                if( !this.isA("Bomb") ) this.destroy();
             });
         },
     });
 };
 
-var Q = Quintus({ development: true }).include("Sprites, Scenes, Input, 2D, MyAI")
+var Q = Quintus({ development: true }).include("Sprites, Scenes, Input, 2D, Anim, MyAI")
   .setup({ height: 500, width: 500, maximize: false }).controls();
 
 Q.input.keyboardControls({
@@ -125,7 +124,7 @@ Q.Sprite.extend("Angel", {
         if( isNaN(direction) ) { 
             direction = 1;
         } 
-        Q.stage().insert(new Q.Arrow({ 
+        Q.stage().insert(new Q.Bomb({ 
             vx: 0, 
             vy: 0,
             x: this.p.x,
@@ -140,6 +139,42 @@ Q.Sprite.extend("Arrow", {
     init: function(p) {
         this._super(p, { asset: "arrow.png", gravity: 0.3 });
         this.add("2d, projectile");
+    }
+});
+Q.Sprite.extend("Bomb", {
+    init: function(p) {
+        this._super(p, { asset: "arrow.png", gravity: 0.5 });
+        this.add("2d, projectile, tween");
+        this.timer = 0;
+        this.on("bump.bottom", this.explode);
+        this.on("step", function() {
+            this.timer += 1;
+            console.log(this.timer);
+            if( this.timer > 20 ) {
+                this.explode();
+            }
+        });
+    },
+    explode: function() {
+        if( this.exploding ) return;
+        this.exploding = true;
+        this.asset("explosion0.png");
+        this.animate({"angle": 360,
+                      }, 0.2, Q.Easing.Linear, {
+                          "callback": this.destroy 
+                      });
+        Q.stage()._collisionLayer.setTile(
+            Math.floor(this.p.x / 32 - 1), 
+            Math.floor(this.p.y / 32 + 1),
+            0);
+        Q.stage()._collisionLayer.setTile(
+            Math.floor(this.p.x / 32), 
+            Math.floor(this.p.y / 32 + 1),
+            0);
+        Q.stage()._collisionLayer.setTile(
+            Math.ceil(this.p.x / 32), 
+            Math.floor(this.p.y / 32 + 1),
+            0);
     }
 });
 
@@ -193,7 +228,7 @@ Q.scene("level1", function(stage) {
     });
 });
 
-Q.load("arrow.png, angel.png, archer.png, level.json, tiles.png", 
+Q.load("arrow.png, angel.png, archer.png, level.json, tiles.png, explosion0.png", 
        function() {
     Q.sheet("tiles","tiles.png", { tilew: 32, tileh: 32 });
     Q.stageScene("level1");
