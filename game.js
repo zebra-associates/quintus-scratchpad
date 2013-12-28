@@ -103,6 +103,25 @@ Q.input.keyboardControls({
     9: "tab"
 });
 
+Q.Sprite.extend("Engineer", {
+    init: function(p) {
+        this.controlComponent = "platformerControls";
+        this.person = true;
+        this.team = "blue";
+        this._super(p, {
+            "asset": "engineer.png"
+        });
+        this.add("2d, aiBounce, myAI");
+    },
+    fireWeapon: function() {
+        var direction = this.p.direction === "left" ? -1 : 1;
+        Q.stage()._collisionLayer.setTile(
+            Math.ceil(this.p.x / 32) + direction,
+            Math.ceil(this.p.y / 32),
+            2);
+    }
+});
+
 Q.Sprite.extend("Angel", {
     init: function(p) {
         this.controlComponent = "zeroGravityControls";
@@ -113,11 +132,6 @@ Q.Sprite.extend("Angel", {
             gravity: -0.5
         });
         this.add("2d, zeroGravityControls, player");
-        this.on("bump.bottom", function(collision) {
-            if( collision.obj.isA("Archer") ) { 
-//                collision.obj.destroy();
-            }
-        });
     },
     fireWeapon: function() {
         var direction = this.p.vx / Math.abs(this.p.vx);
@@ -149,7 +163,6 @@ Q.Sprite.extend("Bomb", {
         this.on("bump.bottom", this.explode);
         this.on("step", function() {
             this.timer += 1;
-            console.log(this.timer);
             if( this.timer > 20 ) {
                 this.explode();
             }
@@ -210,9 +223,13 @@ Q.scene("level1", function(stage) {
     stage.insert(archer2);
     var angel = new Q.Angel({ x: 510, y: 90 });
     stage.insert(angel);
+    var angel2 = new Q.Angel({ x: 310, y: 90 });
+    stage.insert(angel2);
+    var engineer = new Q.Engineer({ x: 400, y: 110 });
+    stage.insert(engineer);
     stage.add("viewport").follow(angel);
 
-    stage.people = [archer1, archer2, angel];
+    stage.people = [archer1, archer2, engineer, angel, angel2];
     Q.input.on("tab", function() {
         stage.viewport.following.del("player");
         stage.viewport.following.del(stage.viewport.following.controlComponent);
@@ -228,7 +245,7 @@ Q.scene("level1", function(stage) {
     });
 });
 
-Q.load("arrow.png, angel.png, archer.png, level.json, tiles.png, explosion0.png", 
+Q.load("arrow.png, angel.png, archer.png, level.json, tiles.png, explosion0.png, engineer.png", 
        function() {
     Q.sheet("tiles","tiles.png", { tilew: 32, tileh: 32 });
     Q.stageScene("level1");
