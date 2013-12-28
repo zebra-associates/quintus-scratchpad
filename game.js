@@ -97,7 +97,7 @@ Quintus.MyAI = function(Q) {
 };
 
 var Q = Quintus({ development: true }).include("Sprites, Scenes, Input, 2D, Anim, MyAI")
-  .setup({ height: 500, width: 500, maximize: false }).controls();
+  .setup({ height: 500, width: 500, maximize: true }).controls();
 
 Q.input.keyboardControls({
     9: "tab"
