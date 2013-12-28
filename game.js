@@ -1,13 +1,14 @@
 Quintus.MyAI = function(Q) {
     Q.component("myAI", {
         added: function(p) {
+            this.entity.p.vx = 100;
             this.on("bump.left", this, "jumpLeft");
             this.on("bump.right", this, "jumpRight");
             this.entity.on("step", this, "maybeFireWeapon");
         },
         destroyed: function() {
-            this.off("bump.left");
-            this.off("bump.right");
+            this.off("bump.left", this, "jumpLeft");
+            this.off("bump.right", this, "jumpRight");
             this.entity.off("step", this, "maybeFireWeapon");
         },
         maybeFireWeapon: function() {
@@ -36,6 +37,52 @@ Quintus.MyAI = function(Q) {
             Q.input.off("fire", this.entity, "fireWeapon");
         }
     });
+    Q.component("zeroGravityControls", {
+        defaults: {
+            speed: 200,
+            jumpSpeed: -300
+        },
+
+        added: function() {
+            var p = this.entity.p;
+            
+            Q._defaults(p,this.defaults);
+            
+            this.entity.on("step",this,"step");
+            this.entity.on("bump.bottom",this,"landed");
+            
+            p.landed = 0;
+            p.direction ='right';
+        },
+        
+        landed: function(col) {
+            var p = this.entity.p;
+            p.landed = 1/5;
+        },
+        
+        step: function(dt) {
+            var p = this.entity.p;
+            
+            if(Q.inputs['left']) {
+                p.vx = -p.speed;
+                p.direction = 'left';
+            } else if(Q.inputs['right']) {
+                p.direction = 'right';
+                p.vx = p.speed;
+            } else {
+                p.vx = 0;
+            }
+            if(Q.inputs['up']) {
+                p.direction = 'up';
+                p.vy = -p.speed;
+            } else if(Q.inputs['down']) {
+                p.direction = 'down';
+                p.vy = p.speed;
+            }
+            
+        }
+    });
+
     Q.component("projectile", {
         added: function() {
             this.entity.on("hit", function(collision) {
@@ -59,18 +106,34 @@ Q.input.keyboardControls({
 
 Q.Sprite.extend("Angel", {
     init: function(p) {
+        this.controlComponent = "zeroGravityControls";
         this.person = true;
         this.team = "red";
         this._super(p, {
-          asset: "angel.png"
+            asset: "angel.png",
+            gravity: -0.5
         });
-        this.add("2d, platformerControls, player");
+        this.add("2d, zeroGravityControls, player");
         this.on("bump.bottom", function(collision) {
             if( collision.obj.isA("Archer") ) { 
 //                collision.obj.destroy();
             }
         });
+    },
+    fireWeapon: function() {
+        var direction = this.p.vx / Math.abs(this.p.vx);
+        if( isNaN(direction) ) { 
+            direction = 1;
+        } 
+        Q.stage().insert(new Q.Arrow({ 
+            vx: 0, 
+            vy: 0,
+            x: this.p.x,
+            y: this.p.y + this.p.h,
+            owner_team: this.team
+        }));
     }
+
 });
 
 Q.Sprite.extend("Arrow", {
@@ -82,6 +145,7 @@ Q.Sprite.extend("Arrow", {
 
 Q.Sprite.extend("Archer", {
     init: function(p) {
+        this.controlComponent = "platformerControls";
         this.person = true;
         this.team = "blue";
         this._super(p, { asset: "archer.png", vx: 100 });
@@ -105,17 +169,18 @@ Q.Sprite.extend("Archer", {
 Q.scene("level1", function(stage) {
     stage.collisionLayer(new Q.TileLayer({ dataAsset: 'level.json', sheet: 'tiles' }));
 
-    var archer1 = new Q.Archer({ x: 700, y: 0 }); 
+    var archer1 = new Q.Archer({ x: 300, y: 100 });
     stage.insert(archer1);
-    var archer2 = new Q.Archer({ x: 900, y: 0 })
+    var archer2 = new Q.Archer({ x: 600, y: 90 });
     stage.insert(archer2);
-    var angel = new Q.Angel({ x: 510, y: 90 })
+    var angel = new Q.Angel({ x: 510, y: 90 });
     stage.insert(angel);
     stage.add("viewport").follow(angel);
 
     stage.people = [archer1, archer2, angel];
     Q.input.on("tab", function() {
-        stage.viewport.following.del("platformerControls, player");
+        stage.viewport.following.del("player");
+        stage.viewport.following.del(stage.viewport.following.controlComponent);
         stage.viewport.following.add("myAI, aiBounce");
         var idx = stage.people.indexOf(stage.viewport.following) + 1;
         if( idx >= stage.people.length ) {
@@ -123,7 +188,8 @@ Q.scene("level1", function(stage) {
         }
         stage.viewport.following = stage.people[idx];
         stage.viewport.following.del("myAI, aiBounce");
-        stage.viewport.following.add("player, platformerControls");
+        stage.viewport.following.add("player");
+        stage.viewport.following.add(stage.viewport.following.controlComponent);
     });
 });
 
