@@ -14,6 +14,26 @@ Quintus.MyAI = function(Q) {
             if( this.p.vx < 0  && this.p.vy == 0 ) { this.jump(collision); }
         }
     });
+
+    Q.component("player", {
+        added: function() {
+            this.entity.fireWeapon = this.entity.fireWeapon || function() { };
+            Q.input.on("fire", this.entity, "fireWeapon");
+        },
+        destroyed: function() {
+            Q.input.off("fire", this.entity, "fireWeapon");
+        }
+    });
+    Q.component("projectile", {
+        added: function() {
+            this.entity.on("hit", function(collision) {
+                this.destroy();
+                if( collision.obj.person ) {
+                    collision.obj.destroy();
+                }
+            });
+        },
+    });
 };
 
 var Q = Quintus({ development: true }).include("Sprites, Scenes, Input, 2D, MyAI")
@@ -25,10 +45,11 @@ Q.input.keyboardControls({
 
 Q.Sprite.extend("Player", {
     init: function(p) {
+        this.person = true;
         this._super(p, {
           asset: "angel.png"
         });
-        this.add("2d, platformerControls");
+        this.add("2d, platformerControls, player");
         this.on("bump.bottom", function(collision) {
             if( collision.obj.isA("Archer") ) { 
 //                collision.obj.destroy();
@@ -37,10 +58,29 @@ Q.Sprite.extend("Player", {
     }
 });
 
+Q.Sprite.extend("Arrow", {
+    init: function(p) {
+        this._super(p, { asset: "arrow.png", gravity: 0.3 });
+        this.add("2d, projectile");
+    }
+});
+
 Q.Sprite.extend("Archer", {
     init: function(p) {
+        this.person = true;
         this._super(p, { asset: "archer.png", vx: 100 });
         this.add("2d, aiBounce, myAI");
+    },
+    fireWeapon: function() {
+        var direction = this.p.vx / Math.abs(this.p.vx);
+        if( isNaN(direction) ) { 
+            direction = 1;
+        } 
+        Q.stage().insert(new Q.Arrow({ 
+            vx: direction * 200, 
+            vy: -100,
+            x: this.p.x + (direction * this.p.w) + 2 * direction,
+            y: this.p.y }));
     }
 });
     
@@ -57,7 +97,7 @@ Q.scene("level1", function(stage) {
 
     var people = [archer1, archer2, player];
     Q.input.on("tab", function() {
-        stage.viewport.following.del("platformerControls");
+        stage.viewport.following.del("platformerControls, player");
         stage.viewport.following.add("myAI, aiBounce");
         if( stage.viewport.following == player ) {
             stage.viewport.following = archer1;
@@ -65,11 +105,12 @@ Q.scene("level1", function(stage) {
             stage.viewport.following = people[people.indexOf(stage.viewport.following) + 1];
         }
         stage.viewport.following.del("myAI, aiBounce");
-        stage.viewport.following.add("platformerControls");
+        stage.viewport.following.add("platformerControls, player");
     });
 });
 
-Q.load("angel.png, archer.png, level.json, tiles.png", function() {
+Q.load("arrow.png, angel.png, archer.png, level.json, tiles.png", 
+       function() {
     Q.sheet("tiles","tiles.png", { tilew: 32, tileh: 32 });
     Q.stageScene("level1");
 });
