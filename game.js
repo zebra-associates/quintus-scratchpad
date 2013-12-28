@@ -1,8 +1,20 @@
 Quintus.MyAI = function(Q) {
     Q.component("myAI", {
-        init: function(p) {
+        added: function(p) {
             this.on("bump.left", this, "jumpLeft");
             this.on("bump.right", this, "jumpRight");
+            this.entity.on("step", this, "maybeFireWeapon");
+        },
+        destroyed: function() {
+            this.off("bump.left");
+            this.off("bump.right");
+            this.entity.off("step", this, "maybeFireWeapon");
+        },
+        maybeFireWeapon: function() {
+            var rn = Math.random() * 10;
+            if( rn < 0.5 ) {
+                this.entity.fireWeapon();
+            }
         },
         jump: function(collision) {
             this.p.vy -= 300;
@@ -27,10 +39,12 @@ Quintus.MyAI = function(Q) {
     Q.component("projectile", {
         added: function() {
             this.entity.on("hit", function(collision) {
-                this.destroy();
-                if( collision.obj.person ) {
+                if( collision.obj.person && collision.obj.team != this.p.owner_team ) {
+                    Q.stage().people.pop(Q.stage().people.indexOf(collision.obj));
                     collision.obj.destroy();
                 }
+                this.destroy();
+
             });
         },
     });
@@ -43,9 +57,10 @@ Q.input.keyboardControls({
     9: "tab"
 });
 
-Q.Sprite.extend("Player", {
+Q.Sprite.extend("Angel", {
     init: function(p) {
         this.person = true;
+        this.team = "red";
         this._super(p, {
           asset: "angel.png"
         });
@@ -68,6 +83,7 @@ Q.Sprite.extend("Arrow", {
 Q.Sprite.extend("Archer", {
     init: function(p) {
         this.person = true;
+        this.team = "blue";
         this._super(p, { asset: "archer.png", vx: 100 });
         this.add("2d, aiBounce, myAI");
     },
@@ -77,10 +93,12 @@ Q.Sprite.extend("Archer", {
             direction = 1;
         } 
         Q.stage().insert(new Q.Arrow({ 
-            vx: direction * 200, 
+            vx: direction * 250, 
             vy: -100,
             x: this.p.x + (direction * this.p.w) + 2 * direction,
-            y: this.p.y }));
+            y: this.p.y,
+            owner_team: this.team
+        }));
     }
 });
     
@@ -91,21 +109,21 @@ Q.scene("level1", function(stage) {
     stage.insert(archer1);
     var archer2 = new Q.Archer({ x: 900, y: 0 })
     stage.insert(archer2);
-    var player = new Q.Player({ x: 510, y: 90 })
-    stage.insert(player);
-    stage.add("viewport").follow(player);
+    var angel = new Q.Angel({ x: 510, y: 90 })
+    stage.insert(angel);
+    stage.add("viewport").follow(angel);
 
-    var people = [archer1, archer2, player];
+    stage.people = [archer1, archer2, angel];
     Q.input.on("tab", function() {
         stage.viewport.following.del("platformerControls, player");
         stage.viewport.following.add("myAI, aiBounce");
-        if( stage.viewport.following == player ) {
-            stage.viewport.following = archer1;
-        } else {
-            stage.viewport.following = people[people.indexOf(stage.viewport.following) + 1];
+        var idx = stage.people.indexOf(stage.viewport.following) + 1;
+        if( idx >= stage.people.length ) {
+            idx = 0;
         }
+        stage.viewport.following = stage.people[idx];
         stage.viewport.following.del("myAI, aiBounce");
-        stage.viewport.following.add("platformerControls, player");
+        stage.viewport.following.add("player, platformerControls");
     });
 });
 
