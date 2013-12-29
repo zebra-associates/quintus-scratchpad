@@ -102,7 +102,7 @@ var Q = Quintus({ development: true }).include("Sprites, Scenes, Input, 2D, Anim
 Q.input.keyboardControls({
     9: "tab",
     56: "zoomOut",
-    57: "zoomIn"
+    57: "zoomIn",
     58: "zoomReset"
 });
 
