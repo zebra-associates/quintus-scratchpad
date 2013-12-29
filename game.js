@@ -97,11 +97,17 @@ Quintus.MyAI = function(Q) {
 };
 
 var Q = Quintus({ development: true }).include("Sprites, Scenes, Input, 2D, Anim, MyAI")
-  .setup({ height: 500, width: 500, maximize: true }).controls();
+    .setup({ height: 500, width: 500, maximize: true });
 
 Q.input.keyboardControls({
-    9: "tab"
+    9: "tab",
+    56: "zoomOut",
+    57: "zoomIn"
+    58: "zoomReset"
 });
+
+Q.controls();
+
 
 Q.Sprite.extend("Engineer", {
     init: function(p) {
@@ -230,6 +236,15 @@ Q.scene("level1", function(stage) {
     stage.add("viewport").follow(angel);
 
     stage.people = [archer1, archer2, engineer, angel, angel2];
+    Q.input.on("zoomOut", function() {
+        stage.viewport.scale *= 0.5;
+    });
+    Q.input.on("zoomIn", function() {
+        stage.viewport.scale *= 2;
+    });
+    Q.input.on("zoomReset", function() {
+        stage.viewport.scale = 1;
+    });
     Q.input.on("tab", function() {
         stage.viewport.following.del("player");
         stage.viewport.following.del(stage.viewport.following.controlComponent);
