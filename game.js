@@ -83,6 +83,29 @@ Quintus.MyAI = function(Q) {
         }
     });
 
+    Q.component("floorBreaker", {
+        added: function() {
+            this.entity.p.floorTile = floorTile(this.entity);
+            this.entity.on("step", this, "breakFloor");            
+        },
+        destroyed: function() {
+            this.entity.off("step", this, "breakFloor");
+        },
+        breakFloor: function() {
+            var ft = floorTile(this.entity);
+            if( ft.x == this.entity.p.floorTile.x && 
+                ft.y == this.entity.p.floorTile.y ) {
+                return;
+            }
+            this.entity.p.floorTile = ft;
+            if( Q.stage()._collisionLayer.getTile(ft.x, ft.y) == 1 ) {
+                Q.stage()._collisionLayer.setTile(ft.x, ft.y, 3);
+            } else if( Q.stage()._collisionLayer.getTile(ft.x, ft.y) == 3 ) {
+                Q.stage()._collisionLayer.setTile(ft.x, ft.y, 0);
+            }
+        }
+    });
+
     Q.component("projectile", {
         added: function() {
             this.entity.on("hit", function(collision) {
@@ -117,7 +140,7 @@ Q.Sprite.extend("Engineer", {
         this._super(p, {
             "asset": "engineer.png"
         });
-        this.add("2d, aiBounce, myAI");
+        this.add("2d, aiBounce, myAI, floorBreaker");
     },
     fireWeapon: function() {
         var direction = this.p.direction === "left" ? -1 : 1;
@@ -128,6 +151,13 @@ Q.Sprite.extend("Engineer", {
     }
 });
 
+function floorTile(sprite) {
+    var col = Q.stage()._collisionLayer,
+        p = sprite.p;
+    return { x: Math.round((p.x - p.w / 2) / 32),
+             y: Math.ceil((p.y + p.h / 2) / 32) };
+};
+
 Q.Sprite.extend("Angel", {
     init: function(p) {
         this.controlComponent = "zeroGravityControls";
@@ -137,6 +167,7 @@ Q.Sprite.extend("Angel", {
             asset: "angel.png",
             gravity: 0
         });
+        this.p.floorTile = floorTile(this);
         this.add("2d, zeroGravityControls, player");
     },
     fireWeapon: function() {
