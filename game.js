@@ -97,7 +97,7 @@ Quintus.MyAI = function(Q) {
 };
 
 var Q = Quintus({ development: true }).include("Sprites, Scenes, Input, 2D, Anim, MyAI")
-    .setup({ height: 500, width: 500, maximize: true });
+    .setup({ height: 500, width: 500, maximize: false });
 
 Q.input.keyboardControls({
     9: "tab",
@@ -135,7 +135,7 @@ Q.Sprite.extend("Angel", {
         this.team = "red";
         this._super(p, {
             asset: "angel.png",
-            gravity: -0.5
+            gravity: 0
         });
         this.add("2d, zeroGravityControls, player");
     },
@@ -223,19 +223,16 @@ Q.Sprite.extend("Archer", {
 Q.scene("level1", function(stage) {
     stage.collisionLayer(new Q.TileLayer({ dataAsset: 'level.json', sheet: 'tiles' }));
 
-    var archer1 = new Q.Archer({ x: 300, y: 100 });
-    stage.insert(archer1);
-    var archer2 = new Q.Archer({ x: 600, y: 90 });
-    stage.insert(archer2);
-    var angel = new Q.Angel({ x: 510, y: 90 });
-    stage.insert(angel);
-    var angel2 = new Q.Angel({ x: 310, y: 90 });
-    stage.insert(angel2);
-    var engineer = new Q.Engineer({ x: 400, y: 110 });
-    stage.insert(engineer);
-    stage.add("viewport").follow(angel);
 
-    stage.people = [archer1, archer2, engineer, angel, angel2];
+    stage.people = [new Q.Angel({ x: 1000, y: 3000 }),
+                    new Q.Archer({ x: 0, y: 100 }),
+                    new Q.Engineer({ x: 100, y: 100 })
+                   ];
+    for( var i=0; i<stage.people.length; ++i ) {
+        stage.insert(stage.people[i]);
+    }
+    stage.add("viewport").follow(stage.people[0]);
+
     Q.input.on("zoomOut", function() {
         stage.viewport.scale *= 0.5;
     });
